@@ -15,72 +15,51 @@ const RegistrationsManager = () => {
 
   const fetchRegistrations = async () => {
     try {
-      console.log('🔄 Fetching registrations...');
+      console.log('🔄 Starting registration fetch...');
       setLoading(true);
 
-      const { data, error } = await supabase
+      // Simple fetch without any complex joins
+      const { data: registrations, error } = await supabase
         .from('registrations')
         .select('*');
 
-      console.log('📦 Supabase response:', { data, error });
+      console.log('📊 Raw registrations from DB:', registrations);
+      console.log('❌ Error (if any):', error);
 
       if (error) {
-        console.error('❌ Database error:', error);
-        alert('Database error: ' + error.message);
+        console.error('Database error:', error);
+        alert('Error: ' + error.message);
         setRegistrations([]);
         setLoading(false);
         return;
       }
 
-      if (!data || data.length === 0) {
-        console.log('⚠️ No registrations found');
+      if (!registrations || registrations.length === 0) {
+        console.log('⚠️ No registrations in database');
         setRegistrations([]);
         setLoading(false);
         return;
       }
 
-      console.log('✅ Found', data.length, 'registrations');
+      // Just display raw registration data for now
+      const simpleRegistrations = registrations.map(reg => ({
+        id: reg.id,
+        name: `User ${reg.user_id?.slice(0, 8)}...`, // Show partial user ID
+        email: 'Check DB',
+        phone: 'Check DB',
+        event: `Event ${reg.event_id?.slice(0, 8)}...`, // Show partial event ID
+        teamSize: reg.team_size || 1,
+        registeredAt: new Date(reg.created_at || Date.now()).toLocaleString(),
+        status: reg.status || 'confirmed',
+        paymentStatus: reg.payment_status || 'pending',
+        amount: reg.amount || 0
+      }));
 
-      // Process each registration
-      const processed = [];
-      for (const reg of data) {
-        try {
-          const { data: event } = await supabase
-            .from('events')
-            .select('name')
-            .eq('id', reg.event_id)
-            .single();
-
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, email, phone')
-            .eq('id', reg.user_id)
-            .single();
-
-          processed.push({
-            id: reg.id,
-            name: profile?.full_name || 'Unknown User',
-            email: profile?.email || 'No Email',
-            phone: profile?.phone || 'No Phone',
-            event: event?.name || 'Unknown Event',
-            teamSize: reg.team_size || 1,
-            registeredAt: new Date().toLocaleString(),
-            status: reg.status || 'confirmed',
-            paymentStatus: reg.payment_status || 'pending',
-            amount: reg.amount || 0
-          });
-
-          console.log('✅ Processed registration:', profile?.full_name, 'for', event?.name);
-        } catch (err) {
-          console.error('❌ Error processing registration:', reg.id, err);
-        }
-      }
-
-      console.log('🎯 Final processed registrations:', processed.length);
-      setRegistrations(processed);
+      console.log('✅ Simple registrations to display:', simpleRegistrations);
+      setRegistrations(simpleRegistrations);
       setLoading(false);
     } catch (error) {
-      console.error('❌ Fatal error fetching registrations:', error);
+      console.error('❌ Fatal error:', error);
       alert('Fatal error: ' + error.message);
       setRegistrations([]);
       setLoading(false);
