@@ -22,13 +22,26 @@ const Admin = () => {
         return;
       }
 
-      // Check if user is admin (you can add admin check logic here)
-      // For now, allowing all authenticated users
-      // In production, check against admin_users table or user metadata
+      // Check if user exists in admin_users table
+      const { data: adminData, error } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error || !adminData) {
+        console.error('Not an admin user');
+        setIsAdmin(false);
+        // Redirect to home after 2 seconds
+        setTimeout(() => navigate('/'), 2000);
+        return;
+      }
+
       setIsAdmin(true);
     } catch (error) {
       console.error('Error checking admin access:', error);
-      navigate('/');
+      setIsAdmin(false);
+      setTimeout(() => navigate('/'), 2000);
     } finally {
       setLoading(false);
     }
