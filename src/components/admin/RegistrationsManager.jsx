@@ -15,35 +15,36 @@ const RegistrationsManager = () => {
 
   const fetchRegistrations = async () => {
     try {
-      console.log('🔄 Fetching registrations from Supabase...');
-      
+      console.log('🔄 Fetching registrations...');
+      setLoading(true);
+
       const { data, error } = await supabase
         .from('registrations')
         .select('*');
 
-      console.log('📦 Raw response:', { data, error });
+      console.log('📦 Supabase response:', { data, error });
 
       if (error) {
-        console.error('❌ Error fetching registrations:', error);
-        alert('Error loading registrations: ' + error.message);
+        console.error('❌ Database error:', error);
+        alert('Database error: ' + error.message);
         setRegistrations([]);
         setLoading(false);
         return;
       }
-
-      console.log('✅ Fetched registrations:', data?.length || 0);
-      console.log('📋 Data:', data);
 
       if (!data || data.length === 0) {
-        console.warn('⚠️ No registrations found in database');
+        console.log('⚠️ No registrations found');
         setRegistrations([]);
         setLoading(false);
         return;
       }
 
-      // Fetch user and event details for each registration
-      const registrationsWithDetails = await Promise.all(
-        data.map(async (reg) => {
+      console.log('✅ Found', data.length, 'registrations');
+
+      // Process each registration
+      const processed = [];
+      for (const reg of data) {
+        try {
           const { data: event } = await supabase
             .from('events')
             .select('name')
@@ -56,31 +57,31 @@ const RegistrationsManager = () => {
             .eq('id', reg.user_id)
             .single();
 
-          console.log('Registration:', {
-            user: profile?.full_name,
-            event: event?.name
-          });
-
-          return {
+          processed.push({
             id: reg.id,
-            name: profile?.full_name || 'N/A',
-            email: profile?.email || 'N/A',
-            phone: profile?.phone || 'N/A',
+            name: profile?.full_name || 'Unknown User',
+            email: profile?.email || 'No Email',
+            phone: profile?.phone || 'No Phone',
             event: event?.name || 'Unknown Event',
             teamSize: reg.team_size || 1,
             registeredAt: new Date().toLocaleString(),
             status: reg.status || 'confirmed',
             paymentStatus: reg.payment_status || 'pending',
             amount: reg.amount || 0
-          };
-        })
-      );
+          });
 
-      console.log('✅ Processed registrations:', registrationsWithDetails.length);
-      setRegistrations(registrationsWithDetails);
+          console.log('✅ Processed registration:', profile?.full_name, 'for', event?.name);
+        } catch (err) {
+          console.error('❌ Error processing registration:', reg.id, err);
+        }
+      }
+
+      console.log('🎯 Final processed registrations:', processed.length);
+      setRegistrations(processed);
       setLoading(false);
     } catch (error) {
-      console.error('❌ Error fetching registrations:', error);
+      console.error('❌ Fatal error fetching registrations:', error);
+      alert('Fatal error: ' + error.message);
       setRegistrations([]);
       setLoading(false);
     }
