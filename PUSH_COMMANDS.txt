@@ -1,0 +1,7 @@
+Run these commands in terminal:
+
+git add .
+git commit -m "Fix build errors"
+git push
+
+Then wait for Netlify to auto-deploy (1-2 minutes)
