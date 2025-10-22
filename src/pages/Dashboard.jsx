@@ -41,27 +41,32 @@ const Dashboard = () => {
       // Load registrations from Supabase database
       const { data: userRegistrations, error } = await supabase
         .from('registrations')
-        .select(`
-          *,
-          events (
-            id,
-            name,
-            slug,
-            date,
-            time,
-            venue,
-            category
-          )
-        `)
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
+        .select('*')
+        .eq('user_id', currentUser.id);
 
       if (error) {
         console.error('Error loading registrations:', error);
+        setRegistrations([]);
       } else {
-        setRegistrations(userRegistrations || []);
+        // Fetch event details for each registration
+        const registrationsWithEvents = await Promise.all(
+          (userRegistrations || []).map(async (reg) => {
+            const { data: event } = await supabase
+              .from('events')
+              .select('id, name, slug, date, time, venue, category')
+              .eq('id', reg.event_id)
+              .single();
+            
+            return {
+              ...reg,
+              events: event
+            };
+          })
+        );
+        
+        setRegistrations(registrationsWithEvents);
         console.log('✅ Dashboard loaded for user:', currentUser.id);
-        console.log('📊 User registrations:', userRegistrations?.length || 0);
+        console.log('📊 User registrations:', registrationsWithEvents.length);
       }
 
       // Load certificates (empty for now)
@@ -267,7 +272,7 @@ const Dashboard = () => {
                             {reg.status || 'confirmed'}
                           </span>
                           <p className="text-xs text-text-muted mt-2">
-                            Registered: {new Date(reg.created_at).toLocaleDateString()}
+                            {reg.payment_status === 'paid' ? '✅ Paid' : '⏳ Pending'}
                           </p>
                         </div>
                       </div>

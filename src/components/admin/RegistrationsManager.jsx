@@ -1,62 +1,98 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Mail, Phone, Calendar, Download, Eye, X } from 'lucide-react';
 import ShinyCard from '@components/admin/ShinyCard';
+import { supabase } from '../../lib/supabase';
 
 const RegistrationsManager = () => {
   const [selectedRegistration, setSelectedRegistration] = useState(null);
-  
-  // Sample registrations data
-  const registrations = [
-    { 
-      id: 1, 
-      name: 'Rahul Sharma', 
-      email: 'rahul@example.com', 
-      phone: '+91 98765 43210',
-      event: 'Hackathon 2025',
-      teamSize: 4,
-      registeredAt: '2025-03-10 10:30 AM',
-      status: 'confirmed',
-      paymentStatus: 'paid',
-      amount: 500
-    },
-    { 
-      id: 2, 
-      name: 'Priya Patel', 
-      email: 'priya@example.com', 
-      phone: '+91 98765 43211',
-      event: 'AI/ML Workshop',
-      teamSize: 1,
-      registeredAt: '2025-03-10 11:15 AM',
-      status: 'confirmed',
-      paymentStatus: 'free',
-      amount: 0
-    },
-    { 
-      id: 3, 
-      name: 'Amit Kumar', 
-      email: 'amit@example.com', 
-      phone: '+91 98765 43212',
-      event: 'Code Combat',
-      teamSize: 1,
-      registeredAt: '2025-03-10 02:45 PM',
-      status: 'pending',
-      paymentStatus: 'pending',
-      amount: 200
-    },
-    { 
-      id: 4, 
-      name: 'Sneha Reddy', 
-      email: 'sneha@example.com', 
-      phone: '+91 98765 43213',
-      event: 'Gaming Tournament',
-      teamSize: 5,
-      registeredAt: '2025-03-11 09:20 AM',
-      status: 'confirmed',
-      paymentStatus: 'paid',
-      amount: 300
-    },
-  ];
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRegistrations();
+  }, []);
+
+  const fetchRegistrations = async () => {
+    try {
+      console.log('🔄 Fetching registrations from Supabase...');
+      
+      const { data, error } = await supabase
+        .from('registrations')
+        .select('*');
+
+      console.log('📦 Raw response:', { data, error });
+
+      if (error) {
+        console.error('❌ Error fetching registrations:', error);
+        alert('Error loading registrations: ' + error.message);
+        setRegistrations([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Fetched registrations:', data?.length || 0);
+      console.log('📋 Data:', data);
+
+      if (!data || data.length === 0) {
+        console.warn('⚠️ No registrations found in database');
+        setRegistrations([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch user and event details for each registration
+      const registrationsWithDetails = await Promise.all(
+        data.map(async (reg) => {
+          const { data: event } = await supabase
+            .from('events')
+            .select('name')
+            .eq('id', reg.event_id)
+            .single();
+
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, email, phone')
+            .eq('id', reg.user_id)
+            .single();
+
+          console.log('Registration:', {
+            user: profile?.full_name,
+            event: event?.name
+          });
+
+          return {
+            id: reg.id,
+            name: profile?.full_name || 'N/A',
+            email: profile?.email || 'N/A',
+            phone: profile?.phone || 'N/A',
+            event: event?.name || 'Unknown Event',
+            teamSize: reg.team_size || 1,
+            registeredAt: new Date().toLocaleString(),
+            status: reg.status || 'confirmed',
+            paymentStatus: reg.payment_status || 'pending',
+            amount: reg.amount || 0
+          };
+        })
+      );
+
+      console.log('✅ Processed registrations:', registrationsWithDetails.length);
+      setRegistrations(registrationsWithDetails);
+      setLoading(false);
+    } catch (error) {
+      console.error('❌ Error fetching registrations:', error);
+      setRegistrations([]);
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const exportToCSV = () => {
     const headers = ['ID', 'Name', 'Email', 'Phone', 'Event', 'Team Size', 'Status', 'Payment', 'Amount'];
