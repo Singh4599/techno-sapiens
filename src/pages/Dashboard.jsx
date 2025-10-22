@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Calendar, Trophy, Download, LogOut, Mail, Phone, Building } from 'lucide-react';
-import { auth, db } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import Button from '@components/common/Button';
 
 const Dashboard = () => {
@@ -20,13 +20,12 @@ const Dashboard = () => {
   const loadUserData = async () => {
     try {
       // Check session first
-      const session = await auth.getSession();
-      if (!session || !session.user) {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
         navigate('/login');
         return;
       }
 
-      const currentUser = session.user;
       setUser(currentUser);
       
       // Use user metadata for profile
@@ -39,13 +38,31 @@ const Dashboard = () => {
         branch: currentUser.user_metadata?.branch || '',
       });
 
-      // Load registrations from ALL registrations, filtered by current user's ID
-      const allRegistrations = JSON.parse(localStorage.getItem('all_registrations') || '[]');
-      const userRegistrations = allRegistrations.filter(reg => reg.user_id === currentUser.id);
-      setRegistrations(userRegistrations);
-      
-      console.log('✅ Dashboard loaded for user:', currentUser.id);
-      console.log('📊 User registrations:', userRegistrations.length);
+      // Load registrations from Supabase database
+      const { data: userRegistrations, error } = await supabase
+        .from('registrations')
+        .select(`
+          *,
+          events (
+            id,
+            name,
+            slug,
+            date,
+            time,
+            venue,
+            category
+          )
+        `)
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading registrations:', error);
+      } else {
+        setRegistrations(userRegistrations || []);
+        console.log('✅ Dashboard loaded for user:', currentUser.id);
+        console.log('📊 User registrations:', userRegistrations?.length || 0);
+      }
 
       // Load certificates (empty for now)
       setCertificates([]);
@@ -228,10 +245,15 @@ const Dashboard = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-lg font-bold text-text-primary mb-1">
-                            {reg.event || reg.event_name || 'Event'}
+                            {reg.events?.name || 'Event'}
                           </h3>
-                          <p className="text-sm text-text-secondary">
-                            {reg.date || (reg.registered_at ? new Date(reg.registered_at).toLocaleDateString() : 'Date not available')}
+                          <p className="text-sm text-text-secondary mb-1">
+                            📅 {reg.events?.date ? new Date(reg.events.date).toLocaleDateString() : 'Date TBA'} • 
+                            ⏰ {reg.events?.time || 'Time TBA'}
+                          </p>
+                          <p className="text-sm text-text-muted">
+                            📍 {reg.events?.venue || 'Venue TBA'} • 
+                            🎯 {reg.events?.category || 'Category'}
                           </p>
                         </div>
                         <div className="text-right">
@@ -244,6 +266,9 @@ const Dashboard = () => {
                           >
                             {reg.status || 'confirmed'}
                           </span>
+                          <p className="text-xs text-text-muted mt-2">
+                            Registered: {new Date(reg.created_at).toLocaleDateString()}
+                          </p>
                         </div>
                       </div>
                     </div>

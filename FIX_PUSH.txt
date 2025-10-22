@@ -1,0 +1,8 @@
+Run these commands to push to correct repo:
+
+cd techno-sapiens
+git remote remove origin
+git remote add origin https://github.com/Singh4599/techno-sapiens.git
+git push -u origin main --force
+
+This will push to the correct repo that Netlify is watching!
