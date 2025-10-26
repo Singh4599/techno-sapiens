@@ -28,7 +28,8 @@ const Sponsors = lazy(() => import('@pages/Sponsors'));
 const Login = lazy(() => import('@pages/Login'));
 const Register = lazy(() => import('@pages/Register'));
 const Dashboard = lazy(() => import('@pages/Dashboard'));
-const AdminLogin = lazy(() => import('@pages/AdminLogin'));
+const AdminLogin = lazy(() => import('@pages/admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('@pages/admin/AdminDashboard'));
 const Admin = lazy(() => import('@pages/Admin'));
 
 function App() {
@@ -124,8 +125,16 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/admin-login" element={<AdminLogin />} />
-              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/manage" element={<Admin />} />
+              <Route 
+                path="/admin/*" 
+                element={
+                  <AdminProtectedRoute>
+                    <AdminDashboard />
+                  </AdminProtectedRoute>
+                } 
+              />
             </Routes>
           </Suspense>
         </main>
