@@ -58,10 +58,15 @@ const RegistrationsManager = () => {
         .from('registrations')
         .select('*');
 
-      console.log('📦 Supabase response:', { count: data?.length, error });
+      console.log('📦 Supabase response:', { 
+        count: data?.length, 
+        error: error,
+        data: data 
+      });
 
       if (error) {
         console.error('❌ Database error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         if (!silent) alert('Database error: ' + error.message);
         setRegistrations([]);
         setLoading(false);
@@ -70,7 +75,8 @@ const RegistrationsManager = () => {
       }
 
       if (!data || data.length === 0) {
-        console.log('⚠️ No registrations found');
+        console.warn('⚠️ No registrations found in database');
+        console.warn('This might be an RLS issue. Check Supabase RLS policies.');
         setRegistrations([]);
         setLoading(false);
         setRefreshing(false);
