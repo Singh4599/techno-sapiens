@@ -10,6 +10,10 @@ const RegistrationsManager = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [eventFilter, setEventFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('all');
 
   useEffect(() => {
     fetchRegistrations();
@@ -149,9 +153,23 @@ const RegistrationsManager = () => {
     );
   }
 
-  const exportToCSV = () => {
+  // Filter registrations based on search and filters
+  const filteredRegistrations = registrations.filter(reg => {
+    const matchesSearch = searchTerm === '' || 
+      reg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reg.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reg.phone.includes(searchTerm);
+    
+    const matchesEvent = eventFilter === 'all' || reg.event === eventFilter;
+    const matchesStatus = statusFilter === 'all' || reg.status === statusFilter;
+    
+    return matchesSearch && matchesEvent && matchesStatus;
+  });
+
+  const exportToCSV = (filtered = false) => {
+    const dataToExport = filtered ? filteredRegistrations : registrations;
     const headers = ['ID', 'Name', 'Email', 'Phone', 'Event', 'Team Size', 'Status', 'Payment', 'Amount'];
-    const rows = registrations.map(r => [
+    const rows = dataToExport.map(r => [
       r.id, r.name, r.email, r.phone, r.event, r.teamSize, r.status, r.paymentStatus, r.amount
     ]);
     
@@ -160,7 +178,7 @@ const RegistrationsManager = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'registrations.csv';
+    a.download = filtered ? 'filtered-registrations.csv' : 'all-registrations.csv';
     a.click();
   };
 
@@ -184,11 +202,18 @@ const RegistrationsManager = () => {
             Refresh
           </button>
           <button 
-            onClick={exportToCSV}
+            onClick={() => exportToCSV(true)}
+            className="px-6 py-3 bg-secondary text-black rounded-lg font-semibold hover:bg-secondary/90 transition-all flex items-center gap-2"
+          >
+            <Download className="w-5 h-5" />
+            Export Filtered CSV
+          </button>
+          <button 
+            onClick={() => exportToCSV(false)}
             className="px-6 py-3 bg-primary text-black rounded-lg font-semibold hover:bg-primary/90 transition-all flex items-center gap-2"
           >
             <Download className="w-5 h-5" />
-            Export CSV
+            Export All CSV
           </button>
         </div>
       </div>
@@ -227,6 +252,44 @@ const RegistrationsManager = () => {
         </ShinyCard>
       </div>
 
+      {/* Search & Filters */}
+      <ShinyCard>
+        <div className="p-4 space-y-4">
+          <h3 className="text-lg font-semibold text-primary mb-4">Search & Filters</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input
+              type="text"
+              placeholder="Search name, email, phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-4 py-2 bg-surface-light border border-white/10 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-primary"
+            />
+            <select
+              value={eventFilter}
+              onChange={(e) => setEventFilter(e.target.value)}
+              className="px-4 py-2 bg-surface-light border border-white/10 rounded-lg text-text-primary focus:outline-none focus:border-primary"
+            >
+              <option value="all">All Events</option>
+              {[...new Set(registrations.map(r => r.event))].map(event => (
+                <option key={event} value={event}>{event}</option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 bg-surface-light border border-white/10 rounded-lg text-text-primary focus:outline-none focus:border-primary"
+            >
+              <option value="all">All Status</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="pending">Pending</option>
+            </select>
+            <div className="text-text-secondary flex items-center">
+              Showing {filteredRegistrations.length} of {registrations.length} registrations
+            </div>
+          </div>
+        </div>
+      </ShinyCard>
+
       {/* Registrations Table */}
       <ShinyCard>
         <div className="overflow-x-auto">
@@ -243,7 +306,7 @@ const RegistrationsManager = () => {
               </tr>
             </thead>
             <tbody>
-              {registrations.map((reg, index) => (
+              {filteredRegistrations.map((reg, index) => (
                 <motion.tr 
                   key={reg.id}
                   className="border-b border-white/5 hover:bg-white/5 transition-colors"

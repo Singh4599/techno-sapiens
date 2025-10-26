@@ -7,14 +7,19 @@ const AdminProtectedRoute = ({ children }) => {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    // Check if admin is logged in
+    // Check if admin is logged in via admin login page
     const isAdmin = localStorage.getItem('isAdmin');
+    const adminEmail = localStorage.getItem('adminEmail');
     
-    if (isAdmin === 'true') {
+    // Must have both isAdmin flag AND adminEmail from admin login
+    if (isAdmin === 'true' && adminEmail === 'Singh') {
       setIsAuthorized(true);
       setIsChecking(false);
     } else {
-      // Not logged in as admin - redirect to login
+      // Clear any invalid admin session
+      localStorage.removeItem('isAdmin');
+      localStorage.removeItem('adminEmail');
+      // Redirect to admin login
       navigate('/admin/login', { replace: true });
     }
   }, [navigate]);

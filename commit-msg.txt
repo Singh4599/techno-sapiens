@@ -1,0 +1,1 @@
+Add registrations tab to admin page - FINAL FIX

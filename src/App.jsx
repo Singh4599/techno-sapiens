@@ -126,12 +126,11 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/manage" element={<Admin />} />
               <Route 
                 path="/admin/*" 
                 element={
                   <AdminProtectedRoute>
-                    <AdminDashboard />
+                    <Admin />
                   </AdminProtectedRoute>
                 } 
               />
