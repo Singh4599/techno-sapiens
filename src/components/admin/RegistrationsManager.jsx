@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Mail, Phone, Calendar, Download, Eye, X } from 'lucide-react';
+import { Users, Mail, Phone, Calendar, Download, Eye, X, RefreshCw } from 'lucide-react';
 import ShinyCard from '@components/admin/ShinyCard';
 import { supabase } from '../../lib/supabase';
 
@@ -8,27 +8,58 @@ const RegistrationsManager = () => {
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   useEffect(() => {
     fetchRegistrations();
+    
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing registrations...');
+      fetchRegistrations(true);
+    }, 10000);
+
+    // Real-time subscription to new registrations
+    const subscription = supabase
+      .channel('registrations_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'registrations' },
+        (payload) => {
+          console.log('🔔 New registration detected!', payload);
+          fetchRegistrations(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const fetchRegistrations = async () => {
+  const fetchRegistrations = async (silent = false) => {
     try {
-      console.log('🔄 Fetching registrations...');
-      setLoading(true);
+      if (!silent) {
+        console.log('🔄 Fetching registrations...');
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
 
       const { data, error } = await supabase
         .from('registrations')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      console.log('📦 Supabase response:', { data, error });
+      console.log('📦 Supabase response:', { count: data?.length, error });
 
       if (error) {
         console.error('❌ Database error:', error);
-        alert('Database error: ' + error.message);
+        if (!silent) alert('Database error: ' + error.message);
         setRegistrations([]);
         setLoading(false);
+        setRefreshing(false);
         return;
       }
 
@@ -36,6 +67,7 @@ const RegistrationsManager = () => {
         console.log('⚠️ No registrations found');
         setRegistrations([]);
         setLoading(false);
+        setRefreshing(false);
         return;
       }
 
@@ -70,21 +102,31 @@ const RegistrationsManager = () => {
             amount: reg.amount || 0
           });
 
-          console.log('✅ Processed registration:', profile?.full_name, 'for', event?.name);
+          if (!silent) {
+            console.log('✅ Processed:', profile?.full_name, 'for', event?.name);
+          }
         } catch (err) {
           console.error('❌ Error processing registration:', reg.id, err);
         }
       }
 
-      console.log('🎯 Final processed registrations:', processed.length);
+      console.log('🎯 Total registrations:', processed.length);
       setRegistrations(processed);
+      setLastUpdated(new Date());
       setLoading(false);
+      setRefreshing(false);
     } catch (error) {
       console.error('❌ Fatal error fetching registrations:', error);
-      alert('Fatal error: ' + error.message);
+      if (!silent) alert('Fatal error: ' + error.message);
       setRegistrations([]);
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
+    fetchRegistrations(true);
   };
 
   if (loading) {
@@ -112,15 +154,31 @@ const RegistrationsManager = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-orbitron font-bold gradient-text">Registrations</h2>
-        <button 
-          onClick={exportToCSV}
-          className="px-6 py-3 bg-primary text-black rounded-lg font-semibold hover:bg-primary/90 transition-all flex items-center gap-2"
-        >
-          <Download className="w-5 h-5" />
-          Export CSV
-        </button>
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h2 className="text-3xl font-orbitron font-bold gradient-text">Registrations</h2>
+          <p className="text-sm text-text-muted mt-1">
+            Last updated: {lastUpdated.toLocaleTimeString()} 
+            {refreshing && <span className="ml-2 text-primary">● Refreshing...</span>}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button 
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className="px-4 py-3 bg-surface-light border border-primary/20 text-primary rounded-lg font-semibold hover:bg-primary/10 transition-all flex items-center gap-2 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <button 
+            onClick={exportToCSV}
+            className="px-6 py-3 bg-primary text-black rounded-lg font-semibold hover:bg-primary/90 transition-all flex items-center gap-2"
+          >
+            <Download className="w-5 h-5" />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
