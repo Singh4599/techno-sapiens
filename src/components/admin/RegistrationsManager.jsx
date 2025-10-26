@@ -21,20 +21,27 @@ const RegistrationsManager = () => {
     }, 10000);
 
     // Real-time subscription to new registrations
-    const subscription = supabase
-      .channel('registrations_changes')
+    const channel = supabase
+      .channel('admin-registrations')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'registrations' },
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'registrations' 
+        },
         (payload) => {
-          console.log('🔔 New registration detected!', payload);
+          console.log('🔔 Registration change detected!', payload);
+          console.log('Event type:', payload.eventType);
           fetchRegistrations(true);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Realtime status:', status);
+      });
 
     return () => {
       clearInterval(interval);
-      subscription.unsubscribe();
+      channel.unsubscribe();
     };
   }, []);
 
@@ -49,8 +56,7 @@ const RegistrationsManager = () => {
 
       const { data, error } = await supabase
         .from('registrations')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
 
       console.log('📦 Supabase response:', { count: data?.length, error });
 
