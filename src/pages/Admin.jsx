@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Users, Trophy, Clock, Heart, TrendingUp, X } from 'lucide-react';
+import { Calendar, MapPin, Users, Trophy, Clock, Heart, TrendingUp, X, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import EventManagement from '../components/admin/EventManagement';
+import RegistrationsManager from '../components/admin/RegistrationsManager';
 import { motion } from 'framer-motion';
 
 const Admin = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('registrations');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,7 +70,44 @@ const Admin = () => {
     );
   }
 
-  return <EventManagement />;
+  return (
+    <div className="min-h-screen bg-background pt-20 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-white/10">
+          <button
+            onClick={() => setActiveTab('registrations')}
+            className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
+              activeTab === 'registrations'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            <List className="w-5 h-5" />
+            Registrations
+          </button>
+          <button
+            onClick={() => setActiveTab('events')}
+            className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
+              activeTab === 'events'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            <Calendar className="w-5 h-5" />
+            Events
+          </button>
+        </div>
+
+        {/* Content */}
+        {activeTab === 'registrations' ? (
+          <RegistrationsManager />
+        ) : (
+          <EventManagement />
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default Admin;
