@@ -125,12 +125,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/admin-login" element={<AdminLogin />} />
-              <Route path="/admin" element={
-                <AdminProtectedRoute>
-                  <Admin />
-                </AdminProtectedRoute>
-              } />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/manage" element={<Admin />} />
               <Route 
                 path="/admin/*" 
                 element={

@@ -49,7 +49,8 @@ const RegistrationsManager = () => {
 
       const { data, error } = await supabase
         .from('registrations')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
       console.log('📦 Supabase response:', { count: data?.length, error });
 

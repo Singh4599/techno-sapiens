@@ -15,7 +15,7 @@ const AdminProtectedRoute = ({ children }) => {
       setIsChecking(false);
     } else {
       // Not logged in as admin - redirect to login
-      navigate('/admin-login', { replace: true });
+      navigate('/admin/login', { replace: true });
     }
   }, [navigate]);
 
