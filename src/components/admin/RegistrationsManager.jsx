@@ -11,6 +11,32 @@ const RegistrationsManager = () => {
 
   useEffect(() => {
     fetchRegistrations();
+
+    // Set up real-time subscription for new registrations
+    console.log('🔔 Setting up real-time subscription...');
+    
+    const subscription = supabase
+      .channel('registrations_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'registrations'
+        },
+        (payload) => {
+          console.log('🔔 Real-time update received:', payload);
+          // Refresh registrations when any change occurs
+          fetchRegistrations();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('🔕 Cleaning up subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchRegistrations = async () => {
