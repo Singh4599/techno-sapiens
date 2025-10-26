@@ -17,25 +17,25 @@ const Admin = () => {
   const checkAdminAccess = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Checking admin access...');
+      console.log('🔄 Starting admin check...');
 
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('👤 User check result:', user?.email || 'No user');
+      console.log('👤 Current user:', user?.email);
 
       if (!user) {
-        console.log('❌ No user logged in');
+        console.log('❌ No user, redirecting to login');
         navigate('/login');
         return;
       }
 
-      // For now, any logged-in user can access admin
-      console.log('✅ User logged in, admin access granted');
+      // Simple check: if user exists and is logged in, allow access for now
+      console.log('✅ User logged in, granting admin access for testing');
       setIsAdmin(true);
 
     } catch (error) {
-      console.error('❌ Admin check error:', error);
+      console.error('❌ Error in admin check:', error);
       setIsAdmin(false);
-      navigate('/');
+      setTimeout(() => navigate('/'), 2000);
     } finally {
       setLoading(false);
     }
